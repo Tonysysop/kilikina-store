@@ -1,0 +1,53 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Inventory collection rules
+    match /inventory/{itemId} {
+      // Allow read access to all users
+      allow read: if true;
+      
+      // Allow write access to all users (for development)
+      // TODO: Add authentication and restrict to authenticated users in production
+      allow create, update, delete: if true;
+    }
+    
+    // Sales collection rules
+    match /sales/{saleId} {
+      // Allow read access to all users
+      allow read: if true;
+      
+      // Allow write access to all users (for development)
+      // TODO: Add authentication and restrict to authenticated users in production
+      allow create: if true;
+      allow update, delete: if true;
+    }
+  }
+}
+
+// PRODUCTION RULES (uncomment and use these when you add authentication):
+// rules_version = '2';
+// 
+// service cloud.firestore {
+//   match /databases/{database}/documents {
+//     
+//     // Helper function to check if user is authenticated
+//     function isAuthenticated() {
+//       return request.auth != null;
+//     }
+//     
+//     // Inventory collection rules
+//     match /inventory/{itemId} {
+//       allow read: if isAuthenticated();
+//       allow create, update, delete: if isAuthenticated();
+//     }
+//     
+//     // Sales collection rules
+//     match /sales/{saleId} {
+//       allow read: if isAuthenticated();
+//       allow create: if isAuthenticated();
+//       allow update, delete: if isAuthenticated();
+//     }
+//   }
+// }
