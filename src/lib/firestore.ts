@@ -43,18 +43,50 @@ interface FirestoreSaleRecord extends Omit<SaleRecord, 'date' | 'id'> {
 /**
  * Add a new inventory item to Firestore
  */
+/**
+ * Recursively remove undefined values from an object
+ * Firestore doesn't accept undefined values
+ */
+function removeUndefined(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return null;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => removeUndefined(item));
+  }
+
+  if (typeof obj === 'object' && !(obj instanceof Timestamp)) {
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        cleaned[key] = removeUndefined(value);
+      }
+    }
+    return cleaned;
+  }
+
+  return obj;
+}
+
+/**
+ * Add a new inventory item to Firestore
+ */
 export async function addInventoryItem(
   item: Omit<InventoryItem, 'id' | 'totalSold' | 'createdAt'>
 ): Promise<string> {
   try {
-    const itemData: Omit<FirestoreInventoryItem, 'id'> = {
+    const itemData = {
       ...item,
       totalSold: 0,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     };
 
-    const docRef = await addDoc(collection(db, INVENTORY_COLLECTION), itemData);
+    // Remove all undefined values recursively
+    const cleanedData = removeUndefined(itemData);
+
+    const docRef = await addDoc(collection(db, INVENTORY_COLLECTION), cleanedData);
     return docRef.id;
   } catch (error) {
     console.error('Error adding inventory item:', error);
@@ -70,11 +102,16 @@ export async function updateInventoryItem(
   updates: Partial<Omit<InventoryItem, 'id' | 'createdAt'>>
 ): Promise<void> {
   try {
-    const docRef = doc(db, INVENTORY_COLLECTION, id);
-    await updateDoc(docRef, {
+    const updateData = {
       ...updates,
       updatedAt: Timestamp.now(),
-    });
+    };
+
+    // Remove all undefined values recursively
+    const cleanedData = removeUndefined(updateData);
+
+    const docRef = doc(db, INVENTORY_COLLECTION, id);
+    await updateDoc(docRef, cleanedData);
   } catch (error) {
     console.error('Error updating inventory item:', error);
     throw new Error('Failed to update inventory item');
@@ -104,7 +141,7 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
       orderBy('createdAt', 'desc')
     );
     const querySnapshot = await getDocs(q);
-    
+
     return querySnapshot.docs.map(doc => {
       const data = doc.data() as FirestoreInventoryItem;
       return {
@@ -185,7 +222,7 @@ export async function getSalesRecords(): Promise<SaleRecord[]> {
       orderBy('date', 'desc')
     );
     const querySnapshot = await getDocs(q);
-    
+
     return querySnapshot.docs.map(doc => {
       const data = doc.data() as FirestoreSaleRecord;
       return {
@@ -236,26 +273,77 @@ export function subscribeToSales(
 
 /**
  * Process a sale (update inventory and create sale record)
- * This should be done atomically, but for simplicity we'll do it sequentially
+ * Supports both regular items and variant-based items
  */
 export async function processSale(
   itemId: string,
   quantitySold: number,
   itemName: string,
-  pricePerItem: number
+  pricePerItem: number,
+  variantId?: string,
+  variantName?: string
 ): Promise<void> {
   try {
     // Get current item
     const itemRef = doc(db, INVENTORY_COLLECTION, itemId);
     const itemDoc = await getDoc(itemRef);
-    
+
     if (!itemDoc.exists()) {
       throw new Error('Item not found');
     }
 
     const itemData = itemDoc.data() as FirestoreInventoryItem;
-    const currentQuantity = itemData.quantity;
     const currentTotalSold = itemData.totalSold || 0;
+
+    // Handle variant-based sales
+    if (variantId && itemData.hasVariants && itemData.variants) {
+      const variants = [...itemData.variants];
+      const variantIndex = variants.findIndex(v => v.id === variantId);
+
+      if (variantIndex === -1) {
+        throw new Error('Variant not found');
+      }
+
+      const variant = variants[variantIndex];
+
+      if (quantitySold > variant.quantity) {
+        throw new Error('Insufficient quantity for variant');
+      }
+
+      // Update the specific variant
+      variants[variantIndex] = {
+        ...variant,
+        quantity: variant.quantity - quantitySold,
+        sold: variant.sold + quantitySold,
+      };
+
+      // Calculate new total quantity
+      const newTotalQuantity = variants.reduce((sum, v) => sum + v.quantity, 0);
+
+      // Update inventory with new variant data
+      await updateDoc(itemRef, {
+        variants,
+        quantity: newTotalQuantity,
+        totalSold: currentTotalSold + quantitySold,
+        updatedAt: Timestamp.now(),
+      });
+
+      // Create sale record with variant info
+      await addSaleRecord({
+        itemId,
+        itemName,
+        quantity: quantitySold,
+        pricePerItem,
+        totalAmount: quantitySold * pricePerItem,
+        variantId,
+        variantName,
+      });
+
+      return;
+    }
+
+    // Handle regular (non-variant) sales
+    const currentQuantity = itemData.quantity;
 
     if (quantitySold > currentQuantity) {
       throw new Error('Insufficient quantity');

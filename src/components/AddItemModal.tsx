@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -10,8 +11,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ImagePlus, X, Loader2 } from 'lucide-react';
 import type { InventoryItem } from '@/types/inventory';
+import type { Variant } from '@/types/variant';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { toast } from 'sonner';
+import { VariantManager } from '@/components/VariantManager';
+import { getTotalQuantity } from '@/lib/variantUtils';
 
 interface AddItemModalProps {
   open: boolean;
@@ -29,6 +33,10 @@ export function AddItemModal({ open, onOpenChange, onAdd }: AddItemModalProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [cloudinaryPublicId, setCloudinaryPublicId] = useState('');
 
+  // Variant support
+  const [hasVariants, setHasVariants] = useState(false);
+  const [variants, setVariants] = useState<Variant[]>([]);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -44,8 +52,21 @@ export function AddItemModal({ open, onOpenChange, onAdd }: AddItemModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!name || !price || !quantity) return;
+
+    if (!name || !price) return;
+
+    // Validate based on mode
+    if (hasVariants) {
+      if (variants.length === 0) {
+        toast.error('Please add at least one variant');
+        return;
+      }
+    } else {
+      if (!quantity) {
+        toast.error('Please enter a quantity');
+        return;
+      }
+    }
 
     setIsUploading(true);
 
@@ -62,23 +83,21 @@ export function AddItemModal({ open, onOpenChange, onAdd }: AddItemModalProps) {
         finalPublicId = uploadResult.public_id;
       }
 
+      const totalQuantity = hasVariants ? getTotalQuantity(variants) : parseInt(quantity);
+
       onAdd({
         name,
         price: parseFloat(price),
-        quantity: parseInt(quantity),
+        quantity: totalQuantity,
         image: finalImageUrl,
         imageUrl: finalImageUrl,
         cloudinaryPublicId: finalPublicId,
+        hasVariants,
+        variants: hasVariants ? variants : undefined,
       });
 
       // Reset form
-      setName('');
-      setPrice('');
-      setQuantity('');
-      setImage('');
-      setImagePreview('');
-      setImageFile(null);
-      setCloudinaryPublicId('');
+      resetForm();
       onOpenChange(false);
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -94,6 +113,10 @@ export function AddItemModal({ open, onOpenChange, onAdd }: AddItemModalProps) {
     setQuantity('');
     setImage('');
     setImagePreview('');
+    setImageFile(null);
+    setCloudinaryPublicId('');
+    setHasVariants(false);
+    setVariants([]);
   };
 
   return (
@@ -101,9 +124,12 @@ export function AddItemModal({ open, onOpenChange, onAdd }: AddItemModalProps) {
       if (!isOpen) resetForm();
       onOpenChange(isOpen);
     }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">Add New Item</DialogTitle>
+          <DialogDescription>
+            Add a new item to your inventory.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -119,6 +145,7 @@ export function AddItemModal({ open, onOpenChange, onAdd }: AddItemModalProps) {
                     onClick={() => {
                       setImage('');
                       setImagePreview('');
+                      setImageFile(null);
                     }}
                     className="absolute top-2 right-2 p-1 rounded-full bg-foreground/80 text-background hover:bg-foreground transition-colors"
                   >
@@ -152,21 +179,46 @@ export function AddItemModal({ open, onOpenChange, onAdd }: AddItemModalProps) {
             />
           </div>
 
-          {/* Price and Quantity */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="price">Price ($)</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                required
-              />
+          {/* Price */}
+          <div className="space-y-2">
+            <Label htmlFor="price">Price (₦)</Label>
+            <Input
+              id="price"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="0.00"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              required
+            />
+          </div>
+
+          {/* Variant Toggle */}
+          <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-primary/5 to-accent/5 border border-border/50">
+            <div>
+              <Label className="text-base font-semibold">Does this product have variants?</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                e.g., Different sizes, colors, or styles
+              </p>
             </div>
+            <button
+              type="button"
+              onClick={() => setHasVariants(!hasVariants)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${hasVariants ? 'bg-gradient-primary' : 'bg-muted'
+                }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hasVariants ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+              />
+            </button>
+          </div>
+
+          {/* Conditional: Single Quantity or Variants */}
+          {hasVariants ? (
+            <VariantManager variants={variants} onChange={setVariants} />
+          ) : (
             <div className="space-y-2">
               <Label htmlFor="quantity">Quantity</Label>
               <Input
@@ -176,10 +228,10 @@ export function AddItemModal({ open, onOpenChange, onAdd }: AddItemModalProps) {
                 placeholder="0"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                required
+                required={!hasVariants}
               />
             </div>
-          </div>
+          )}
 
           {/* Actions */}
           <div className="flex gap-3 pt-2">
@@ -192,7 +244,11 @@ export function AddItemModal({ open, onOpenChange, onAdd }: AddItemModalProps) {
             >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={isUploading}>
+            <Button
+              type="submit"
+              className="flex-1 bg-gradient-primary hover:opacity-90"
+              disabled={isUploading}
+            >
               {isUploading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

@@ -18,7 +18,7 @@ export function useInventory() {
   // Subscribe to real-time Firestore updates
   useEffect(() => {
     setIsLoading(true);
-    
+
     // Subscribe to inventory
     const unsubscribeInventory = subscribeToInventory((updatedItems) => {
       setItems(updatedItems);
@@ -91,9 +91,58 @@ export function useInventory() {
     }
   }, []);
 
-  const sellItem = useCallback(async (id: string, quantitySold: number) => {
+  const sellItem = useCallback(async (id: string, quantitySold: number, variantId?: string) => {
     const item = items.find(i => i.id === id);
-    if (!item || quantitySold > item.quantity) {
+    if (!item) {
+      toast({
+        title: 'Error',
+        description: 'Item not found',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    // Handle variant-based sales
+    if (item.hasVariants && item.variants && variantId) {
+      const variant = item.variants.find(v => v.id === variantId);
+      if (!variant) {
+        toast({
+          title: 'Error',
+          description: 'Variant not found',
+          variant: 'destructive',
+        });
+        return false;
+      }
+
+      if (quantitySold > variant.quantity) {
+        toast({
+          title: 'Error',
+          description: `Insufficient quantity available for ${variant.name}`,
+          variant: 'destructive',
+        });
+        return false;
+      }
+
+      try {
+        await processSale(id, quantitySold, item.name, item.price, variantId, variant.name);
+        toast({
+          title: 'Success',
+          description: `Sold ${quantitySold} ${item.name} (${variant.name})`,
+        });
+        return true;
+      } catch (error) {
+        console.error('Error processing sale:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to process sale. Please try again.',
+          variant: 'destructive',
+        });
+        return false;
+      }
+    }
+
+    // Handle regular (non-variant) sales
+    if (quantitySold > item.quantity) {
       toast({
         title: 'Error',
         description: 'Insufficient quantity available',

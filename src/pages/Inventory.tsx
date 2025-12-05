@@ -11,6 +11,7 @@ import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
 import { EmptyState } from '@/components/EmptyState';
 import { LowStockList } from '@/components/LowStockList';
 import { AvailabilityTable } from '@/components/AvailabilityTable';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -28,14 +29,14 @@ import { cn } from '@/lib/utils';
 
 const Index = () => {
   const { items, stats, addItem, updateItem, deleteItem, sellItem, isLoading } = useInventory();
-  
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [sellingItem, setSellingItem] = useState<InventoryItem | null>(null);
   const [deletingItem, setDeletingItem] = useState<{ id: string; name: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   // Initialize view mode based on screen width
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => 
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() =>
     typeof window !== 'undefined' && window.innerWidth < 768 ? 'list' : 'grid'
   );
 
@@ -73,7 +74,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="container py-4">
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight">
@@ -83,20 +84,24 @@ const Index = () => {
                 Inventory Management
               </p>
             </div>
-            <Button onClick={() => setShowAddModal(true)} size="lg" className="w-full sm:w-auto">
-              <Plus className="h-5 w-5 mr-2" />
-              Add Item
-            </Button>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <ThemeToggle />
+              <Button onClick={() => setShowAddModal(true)} size="lg" className="flex-1 sm:flex-initial">
+                <Plus className="h-5 w-5 sm:mr-2" />
+                <span className="hidden sm:inline">Add Item</span>
+                <span className="sm:hidden">Add</span>
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="container py-6 space-y-8">
+      <main className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
         {/* Stats Grid */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Total Revenue"
-            value={`$${stats.totalRevenue.toFixed(2)}`}
+            value={`₦${stats.totalRevenue.toFixed(2)}`}
             icon={DollarSign}
             variant="primary"
           />
@@ -108,7 +113,7 @@ const Index = () => {
           />
           <StatCard
             title="Stock Value"
-            value={`$${stats.remainingStockValue.toFixed(2)}`}
+            value={`₦${stats.remainingStockValue.toFixed(2)}`}
             icon={Wallet}
             variant="default"
           />
@@ -136,7 +141,7 @@ const Index = () => {
         <section>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <h2 className="text-xl font-display font-semibold">Products</h2>
-            
+
             <div className="flex items-center gap-3">
               {/* Search */}
               <div className="relative flex-1 sm:w-64">
@@ -148,27 +153,25 @@ const Index = () => {
                   className="pl-9"
                 />
               </div>
-              
+
               {/* View Toggle */}
               <div className="flex items-center bg-muted rounded-lg p-1">
                 <button
                   onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-md transition-colors ${
-                    viewMode === 'grid' 
-                      ? 'bg-background shadow-sm text-foreground' 
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={`p-2 rounded-md transition-colors ${viewMode === 'grid'
+                    ? 'bg-background shadow-sm text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                    }`}
                   title="Grid View"
                 >
                   <LayoutGrid className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-md transition-colors ${
-                    viewMode === 'list' 
-                      ? 'bg-background shadow-sm text-foreground' 
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={`p-2 rounded-md transition-colors ${viewMode === 'list'
+                    ? 'bg-background shadow-sm text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                    }`}
                   title="List View"
                 >
                   <List className="h-4 w-4" />

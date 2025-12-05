@@ -18,63 +18,63 @@ export function AvailabilityTable({ items }: AvailabilityTableProps) {
   };
 
   return (
-    <div className="bg-card rounded-lg card-shadow overflow-hidden">
-      <div className="p-4 border-b border-border">
-        <h3 className="font-display font-semibold">Availability Overview</h3>
-        <p className="text-muted-foreground text-xs mt-0.5">Quick view of all item stock levels</p>
+    <div className="bg-card rounded-xl card-shadow overflow-hidden border border-border/50">
+      <div className="p-5 bg-gradient-to-r from-primary/5 to-accent/5 border-b border-border/50">
+        <h3 className="font-display font-bold text-lg">Availability Overview</h3>
+        <p className="text-muted-foreground text-sm mt-1">Quick view of all item stock levels</p>
       </div>
-      
+
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-border bg-muted/30">
-              <th className="text-left p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Item</th>
-              <th className="text-center p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Price</th>
-              <th className="text-center p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Qty</th>
-              <th className="text-center p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+            <tr className="border-b border-border bg-muted/50">
+              <th className="text-left p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Item</th>
+              <th className="text-center p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Price</th>
+              <th className="text-center p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Qty</th>
+              <th className="text-center p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
             </tr>
           </thead>
           <tbody>
             {items.map((item, index) => {
               const status = getStatus(item.quantity);
               const StatusIcon = status.icon;
-              
+
               return (
-                <tr 
-                  key={item.id} 
+                <tr
+                  key={item.id}
                   className={cn(
-                    'border-b border-border/50 hover:bg-muted/30 transition-colors',
+                    'border-b border-border/30 hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent transition-all duration-300',
                     index === items.length - 1 && 'border-b-0'
                   )}
                 >
-                  <td className="p-3">
+                  <td className="p-4">
                     <div className="flex items-center gap-3">
                       {item.image ? (
                         <img
                           src={item.image}
                           alt={item.name}
-                          className="w-8 h-8 rounded-md object-cover"
+                          className="w-10 h-10 rounded-lg object-cover ring-2 ring-border/50"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center">
-                          <Package className="h-4 w-4 text-muted-foreground" />
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">
+                          <Package className="h-5 w-5 text-muted-foreground" />
                         </div>
                       )}
-                      <span className="font-medium text-sm truncate max-w-[150px]">{item.name}</span>
+                      <span className="font-semibold text-sm truncate max-w-[200px]">{item.name}</span>
                     </div>
                   </td>
-                  <td className="p-3 text-center text-sm">${item.price.toFixed(2)}</td>
-                  <td className="p-3 text-center text-sm font-semibold">{item.quantity}</td>
-                  <td className="p-3">
+                  <td className="p-4 text-center text-sm font-semibold">₦{item.price.toFixed(2)}</td>
+                  <td className="p-4 text-center text-sm font-bold">{item.quantity}</td>
+                  <td className="p-4">
                     <div className="flex justify-center">
                       <div className={cn(
-                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
-                        status.color === 'destructive' && 'bg-destructive/10 text-destructive',
-                        status.color === 'accent' && 'bg-accent/10 text-accent',
-                        status.color === 'success' && 'bg-success/10 text-success'
+                        'inline-flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm transition-all duration-300 hover:scale-105',
+                        status.color === 'destructive' && 'bg-gradient-to-r from-destructive to-destructive/80 text-white',
+                        status.color === 'accent' && 'bg-gradient-to-r from-accent to-accent/80 text-white',
+                        status.color === 'success' && 'bg-gradient-success text-white'
                       )}>
-                        <StatusIcon className="h-3 w-3" />
-                        {status.label}
+                        <StatusIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="hidden sm:inline">{status.label}</span>
                       </div>
                     </div>
                   </td>
