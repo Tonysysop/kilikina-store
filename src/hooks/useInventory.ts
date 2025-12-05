@@ -92,6 +92,8 @@ export function useInventory() {
   }, []);
 
   const sellItem = useCallback(async (id: string, quantitySold: number, variantId?: string) => {
+    console.log('🔷 useInventory.sellItem called', { id, quantitySold, variantId });
+
     const item = items.find(i => i.id === id);
     if (!item) {
       toast({
@@ -101,6 +103,12 @@ export function useInventory() {
       });
       return false;
     }
+
+    console.log('🔷 useInventory: Found item', {
+      itemName: item.name,
+      hasVariants: item.hasVariants,
+      variants: item.variants
+    });
 
     // Handle variant-based sales
     if (item.hasVariants && item.variants && variantId) {
@@ -114,6 +122,13 @@ export function useInventory() {
         return false;
       }
 
+      console.log('🔷 useInventory: Processing variant sale', {
+        variantId,
+        variantName: variant.name,
+        variantQuantity: variant.quantity,
+        quantitySold
+      });
+
       if (quantitySold > variant.quantity) {
         toast({
           title: 'Error',
@@ -124,6 +139,7 @@ export function useInventory() {
       }
 
       try {
+        console.log('🔷 useInventory: Calling processSale');
         await processSale(id, quantitySold, item.name, item.price, variantId, variant.name);
         toast({
           title: 'Success',
@@ -132,9 +148,10 @@ export function useInventory() {
         return true;
       } catch (error) {
         console.error('Error processing sale:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to process sale. Please try again.';
         toast({
           title: 'Error',
-          description: 'Failed to process sale. Please try again.',
+          description: errorMessage,
           variant: 'destructive',
         });
         return false;
@@ -160,9 +177,10 @@ export function useInventory() {
       return true;
     } catch (error) {
       console.error('Error processing sale:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to process sale. Please try again.';
       toast({
         title: 'Error',
-        description: 'Failed to process sale. Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       });
       return false;

@@ -180,6 +180,10 @@ export function subscribeToInventory(
           updatedAt: data.updatedAt?.toMillis(),
         };
       });
+      console.log('📡 Firestore: Inventory update received', {
+        itemCount: items.length,
+        items: items.map(i => ({ id: i.id, name: i.name, variants: i.variants }))
+      });
       callback(items);
     },
     (error) => {
@@ -306,6 +310,14 @@ export async function processSale(
 
       const variant = variants[variantIndex];
 
+      console.log('🛒 processSale: Before update', {
+        variantId,
+        variantName: variant.name,
+        currentQuantity: variant.quantity,
+        quantitySold,
+        newQuantity: variant.quantity - quantitySold
+      });
+
       if (quantitySold > variant.quantity) {
         throw new Error('Insufficient quantity for variant');
       }
@@ -314,11 +326,17 @@ export async function processSale(
       variants[variantIndex] = {
         ...variant,
         quantity: variant.quantity - quantitySold,
-        sold: variant.sold + quantitySold,
+        sold: (variant.sold || 0) + quantitySold,
       };
 
       // Calculate new total quantity
       const newTotalQuantity = variants.reduce((sum, v) => sum + v.quantity, 0);
+
+      console.log('💾 processSale: Updating Firestore', {
+        updatedVariant: variants[variantIndex],
+        newTotalQuantity,
+        allVariants: variants
+      });
 
       // Update inventory with new variant data
       await updateDoc(itemRef, {
@@ -327,6 +345,8 @@ export async function processSale(
         totalSold: currentTotalSold + quantitySold,
         updatedAt: Timestamp.now(),
       });
+
+      console.log('✅ processSale: Firestore updated successfully');
 
       // Create sale record with variant info
       await addSaleRecord({

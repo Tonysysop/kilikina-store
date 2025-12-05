@@ -3,7 +3,7 @@ import type { Variant } from '@/types/variant';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, Edit2, Check } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateVariantId } from '@/lib/variantUtils';
 
@@ -14,6 +14,7 @@ interface VariantManagerProps {
 
 export function VariantManager({ variants, onChange }: VariantManagerProps) {
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [editValues, setEditValues] = useState<{ name: string; quantity: string; sku: string } | null>(null);
     const [newVariant, setNewVariant] = useState({ name: '', quantity: '', sku: '' });
 
     const handleAddVariant = () => {
@@ -31,13 +32,44 @@ export function VariantManager({ variants, onChange }: VariantManagerProps) {
         setNewVariant({ name: '', quantity: '', sku: '' });
     };
 
-    const handleUpdateVariant = (id: string, updates: Partial<Variant>) => {
-        onChange(variants.map(v => v.id === id ? { ...v, ...updates } : v));
+    const startEditing = (variant: Variant) => {
+        setEditingId(variant.id);
+        setEditValues({
+            name: variant.name,
+            quantity: variant.quantity.toString(),
+            sku: variant.sku || ''
+        });
+    };
+
+    const handleSaveEdit = () => {
+        if (!editingId || !editValues) return;
+
+        onChange(variants.map(v => v.id === editingId ? {
+            ...v,
+            name: editValues.name,
+            quantity: parseInt(editValues.quantity) || 0,
+            sku: editValues.sku.trim() || undefined
+        } : v));
+
         setEditingId(null);
+        setEditValues(null);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingId(null);
+        setEditValues(null);
     };
 
     const handleDeleteVariant = (id: string) => {
         onChange(variants.filter(v => v.id !== id));
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleSaveEdit();
+        } else if (e.key === 'Escape') {
+            handleCancelEdit();
+        }
     };
 
     return (
@@ -55,26 +87,39 @@ export function VariantManager({ variants, onChange }: VariantManagerProps) {
                             key={variant.id}
                             className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors border border-border/50"
                         >
-                            {editingId === variant.id ? (
+                            {editingId === variant.id && editValues ? (
                                 <>
                                     <Input
-                                        defaultValue={variant.name}
+                                        value={editValues.name}
+                                        onChange={(e) => setEditValues({ ...editValues, name: e.target.value })}
                                         className="flex-1 h-8"
-                                        onBlur={(e) => handleUpdateVariant(variant.id, { name: e.target.value })}
+                                        onKeyDown={handleKeyDown}
+                                        autoFocus
                                     />
                                     <Input
                                         type="number"
-                                        defaultValue={variant.quantity}
+                                        value={editValues.quantity}
+                                        onChange={(e) => setEditValues({ ...editValues, quantity: e.target.value })}
                                         className="w-20 h-8"
-                                        onBlur={(e) => handleUpdateVariant(variant.id, { quantity: parseInt(e.target.value) || 0 })}
+                                        onKeyDown={handleKeyDown}
                                     />
                                     <Button
+                                        type="button"
                                         size="sm"
                                         variant="ghost"
-                                        className="h-8 w-8 p-0"
-                                        onClick={() => setEditingId(null)}
+                                        className="h-8 w-8 p-0 text-success hover:text-success hover:bg-success/10"
+                                        onClick={handleSaveEdit}
                                     >
                                         <Check className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                        onClick={handleCancelEdit}
+                                    >
+                                        <X className="h-4 w-4" />
                                     </Button>
                                 </>
                             ) : (
@@ -94,14 +139,16 @@ export function VariantManager({ variants, onChange }: VariantManagerProps) {
                                         {variant.quantity} in stock
                                     </div>
                                     <Button
+                                        type="button"
                                         size="sm"
                                         variant="ghost"
                                         className="h-8 w-8 p-0"
-                                        onClick={() => setEditingId(variant.id)}
+                                        onClick={() => startEditing(variant)}
                                     >
                                         <Edit2 className="h-4 w-4" />
                                     </Button>
                                     <Button
+                                        type="button"
                                         size="sm"
                                         variant="ghost"
                                         className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
@@ -153,6 +200,7 @@ export function VariantManager({ variants, onChange }: VariantManagerProps) {
                     </div>
                 </div>
                 <Button
+                    type="button"
                     onClick={handleAddVariant}
                     disabled={!newVariant.name || !newVariant.quantity}
                     className="w-full bg-gradient-primary hover:opacity-90 transition-all duration-300"

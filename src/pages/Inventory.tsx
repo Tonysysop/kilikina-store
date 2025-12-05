@@ -238,11 +238,11 @@ const Index = () => {
       />
 
       <SellItemModal
-        item={sellingItem}
+        item={sellingItem ? items.find(i => i.id === sellingItem.id) || sellingItem : null}
         open={!!sellingItem}
         onOpenChange={(open) => !open && setSellingItem(null)}
-        onSell={async (id, quantity) => {
-          const result = await sellItem(id, quantity);
+        onSell={async (id, quantity, variantId) => {
+          const result = await sellItem(id, quantity, variantId);
           return result;
         }}
       />

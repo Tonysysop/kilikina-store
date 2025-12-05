@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -24,15 +25,44 @@ interface SellItemModalProps {
 export function SellItemModal({ item, open, onOpenChange, onSell }: SellItemModalProps) {
   const hasVariants = item?.hasVariants && item?.variants && item.variants.length > 0;
 
-  // Initialize selectedVariant based on item variants
-  const getInitialVariant = (): Variant | null => {
-    if (!hasVariants || !item?.variants) return null;
-    const firstAvailable = item.variants.find(v => v.quantity > 0);
-    return firstAvailable || item.variants[0];
-  };
-
   const [quantity, setQuantity] = useState(1);
-  const [selectedVariant, setSelectedVariant] = useState<Variant | null>(getInitialVariant);
+  const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
+
+  // Track previous state to detect changes for reset
+  const [prevOpen, setPrevOpen] = useState(open);
+  const [prevItemId, setPrevItemId] = useState(item?.id);
+  const variantsStr = JSON.stringify(item?.variants);
+  const [prevVariantsStr, setPrevVariantsStr] = useState(variantsStr);
+
+  const shouldReset =
+    (open && !prevOpen) || // Just opened
+    (!open && prevOpen) || // Just closed
+    (item?.id !== prevItemId) || // Item changed
+    (variantsStr !== prevVariantsStr); // Variants changed
+
+  if (shouldReset) {
+    setPrevOpen(open);
+    setPrevItemId(item?.id);
+    setPrevVariantsStr(variantsStr);
+
+    if (!open || !item) {
+      setSelectedVariant(null);
+      setQuantity(1);
+    } else {
+      if (!hasVariants || !item.variants || item.variants.length === 0) {
+        setSelectedVariant(null);
+        setQuantity(1);
+      } else {
+        // Always get fresh variant data when modal opens or variants change
+        const firstAvailable = item.variants.find(v => v.quantity > 0);
+        const initialVariant = firstAvailable || item.variants[0];
+
+        setSelectedVariant(initialVariant);
+        setQuantity(1);
+      }
+    }
+  }
+
 
   const availableStock = hasVariants && selectedVariant ? selectedVariant.quantity : item?.quantity || 0;
 
@@ -46,6 +76,14 @@ export function SellItemModal({ item, open, onOpenChange, onSell }: SellItemModa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    console.log('🔵 SellItemModal: handleSubmit called', {
+      itemId: item?.id,
+      quantity,
+      availableStock,
+      hasVariants,
+      selectedVariant
+    });
+
     if (!item || quantity < 1 || quantity > availableStock) return;
 
     // If has variants, ensure a variant is selected
@@ -54,11 +92,19 @@ export function SellItemModal({ item, open, onOpenChange, onSell }: SellItemModa
       return;
     }
 
+    console.log('🟢 SellItemModal: Calling onSell', {
+      itemId: item.id,
+      quantity,
+      variantId: selectedVariant?.id
+    });
+
     const success = await onSell(
       item.id,
       quantity,
       selectedVariant?.id
     );
+
+    console.log('🟣 SellItemModal: onSell returned', { success });
 
     if (success) {
       const variantInfo = selectedVariant ? ` (${selectedVariant.name})` : '';
@@ -79,6 +125,9 @@ export function SellItemModal({ item, open, onOpenChange, onSell }: SellItemModa
     <Dialog open={open} onOpenChange={onOpenChange} key={item.id}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
+          <DialogDescription>
+            
+          </DialogDescription>
           <DialogTitle className="font-display text-xl">Record Sale</DialogTitle>
         </DialogHeader>
 
