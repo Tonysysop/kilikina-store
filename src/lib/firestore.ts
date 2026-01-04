@@ -389,3 +389,79 @@ export async function processSale(
     throw error;
   }
 }
+// ============================================================================
+// CATEGORY OPERATIONS
+// ============================================================================
+
+const CATEGORIES_COLLECTION = 'categories';
+
+export interface Category {
+  id: string;
+  name: string;
+  createdAt: number;
+}
+
+interface FirestoreCategory extends Omit<Category, 'createdAt' | 'id'> {
+  createdAt: Timestamp;
+}
+
+/**
+ * Subscribe to real-time category updates
+ */
+export function subscribeToCategories(
+  callback: (categories: Category[]) => void
+): Unsubscribe {
+  const q = query(
+    collection(db, CATEGORIES_COLLECTION),
+    orderBy('name', 'asc')
+  );
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const categories = snapshot.docs.map(doc => {
+        const data = doc.data() as FirestoreCategory;
+        return {
+          ...data,
+          id: doc.id,
+          createdAt: data.createdAt.toMillis(),
+        };
+      });
+      callback(categories);
+    },
+    (error) => {
+      console.error('Error in categories subscription:', error);
+    }
+  );
+}
+
+/**
+ * Add a new category
+ */
+export async function addCategory(name: string): Promise<string> {
+  try {
+    const categoryData = {
+      name,
+      createdAt: Timestamp.now(),
+    };
+
+    const docRef = await addDoc(collection(db, CATEGORIES_COLLECTION), categoryData);
+    return docRef.id;
+  } catch (error) {
+    console.error('Error adding category:', error);
+    throw new Error('Failed to add category');
+  }
+}
+
+/**
+ * Delete a category
+ */
+export async function deleteCategory(id: string): Promise<void> {
+  try {
+    const docRef = doc(db, CATEGORIES_COLLECTION, id);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    throw new Error('Failed to delete category');
+  }
+}

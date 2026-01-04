@@ -4,38 +4,54 @@ import type { InventoryItem, SaleRecord } from '@/types/inventory';
 import {
   subscribeToInventory,
   subscribeToSales,
+  subscribeToCategories,
   addInventoryItem,
   updateInventoryItem,
   deleteInventoryItem,
+  addCategory as firestoreAddCategory,
+  deleteCategory as firestoreDeleteCategory,
   processSale,
+  type Category,
 } from '@/lib/firestore';
 
 export function useInventory() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [sales, setSales] = useState<SaleRecord[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Subscribe to real-time Firestore updates
   useEffect(() => {
     setIsLoading(true);
 
-    // Subscribe to inventory
     const unsubscribeInventory = subscribeToInventory((updatedItems) => {
       setItems(updatedItems);
-      setIsLoading(false);
+      // Only set loading to false if sales and categories are also loaded or if we decide inventory is enough
+      // For now, let's keep simple loading state logic or refine it
     });
 
-    // Subscribe to sales
     const unsubscribeSales = subscribeToSales((updatedSales) => {
       setSales(updatedSales);
     });
 
-    // Cleanup subscriptions on unmount
+    const unsubscribeCategories = subscribeToCategories((updatedCategories) => {
+      setCategories(updatedCategories);
+    });
+
     return () => {
       unsubscribeInventory();
       unsubscribeSales();
+      unsubscribeCategories();
     };
   }, []);
+
+  // Update loading state when items are loaded (simplification)
+  useEffect(() => {
+    if (items.length > 0 || categories.length >= 0) {
+      setIsLoading(false);
+    }
+  }, [items, categories]);
+
 
   const addItem = useCallback(async (item: Omit<InventoryItem, 'id' | 'totalSold' | 'createdAt'>) => {
     try {
@@ -91,6 +107,42 @@ export function useInventory() {
     }
   }, []);
 
+  const addCategory = useCallback(async (name: string) => {
+    try {
+      await firestoreAddCategory(name);
+      toast({
+        title: 'Success',
+        description: 'Category added successfully',
+      });
+    } catch (error) {
+      console.error('Error adding category:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add category',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  }, []);
+
+  const deleteCategory = useCallback(async (id: string) => {
+    try {
+      await firestoreDeleteCategory(id);
+      toast({
+        title: 'Success',
+        description: 'Category deleted successfully',
+      });
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete category',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  }, []);
+
   const sellItem = useCallback(async (id: string, quantitySold: number, variantId?: string) => {
     console.log('🔷 useInventory.sellItem called', { id, quantitySold, variantId });
 
@@ -104,6 +156,7 @@ export function useInventory() {
       return false;
     }
 
+    // ... (rest of sellItem logic remains same, just ensuring correct exposure at end)
     console.log('🔷 useInventory: Found item', {
       itemName: item.name,
       hasVariants: item.hasVariants,
@@ -132,7 +185,7 @@ export function useInventory() {
       if (quantitySold > variant.quantity) {
         toast({
           title: 'Error',
-          description: `Insufficient quantity available for ${variant.name}`,
+          description: 'Insufficient quantity available',
           variant: 'destructive',
         });
         return false;
@@ -148,10 +201,9 @@ export function useInventory() {
         return true;
       } catch (error) {
         console.error('Error processing sale:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Failed to process sale. Please try again.';
         toast({
           title: 'Error',
-          description: errorMessage,
+          description: 'Failed to process sale',
           variant: 'destructive',
         });
         return false;
@@ -177,10 +229,9 @@ export function useInventory() {
       return true;
     } catch (error) {
       console.error('Error processing sale:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to process sale. Please try again.';
       toast({
         title: 'Error',
-        description: errorMessage,
+        description: 'Failed to process sale',
         variant: 'destructive',
       });
       return false;
@@ -200,11 +251,14 @@ export function useInventory() {
   return {
     items,
     sales,
+    categories,
     stats,
     isLoading,
     addItem,
     updateItem,
     deleteItem,
     sellItem,
+    addCategory,
+    deleteCategory,
   };
 }

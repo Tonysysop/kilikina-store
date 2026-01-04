@@ -13,15 +13,12 @@ service cloud.firestore {
       allow create, update, delete: if true;
     }
     
-    // Sales collection rules
     match /sales/{saleId} {
-      // Allow read access to all users
-      allow read: if true;
-      
-      // Allow write access to all users (for development)
-      // TODO: Add authentication and restrict to authenticated users in production
-      allow create: if true;
-      allow update, delete: if true;
+      allow read, write: if true;
+    }
+
+    match /categories/{categoryId} {
+      allow read, write: if true;
     }
   }
 }
