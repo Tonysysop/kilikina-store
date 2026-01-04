@@ -16,6 +16,22 @@ import { uploadToCloudinary } from '@/lib/cloudinary';
 import { toast } from 'sonner';
 import { VariantManager } from '@/components/VariantManager';
 import { getTotalQuantity } from '@/lib/variantUtils';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { useInventory } from '@/hooks/useInventory';
+import { cn } from '@/lib/utils';
+import { Check, ChevronsUpDown, Plus, Trash2 } from 'lucide-react';
 
 interface AddItemModalProps {
   open: boolean;
@@ -27,6 +43,9 @@ export function AddItemModal({ open, onOpenChange, onAdd }: AddItemModalProps) {
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [quantity, setQuantity] = useState('');
+  const [category, setCategory] = useState('');
+  const [newCategory, setNewCategory] = useState('');
+  const [openCombobox, setOpenCombobox] = useState(false);
   const [image, setImage] = useState('');
   const [imagePreview, setImagePreview] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -36,6 +55,8 @@ export function AddItemModal({ open, onOpenChange, onAdd }: AddItemModalProps) {
   // Variant support
   const [hasVariants, setHasVariants] = useState(false);
   const [variants, setVariants] = useState<Variant[]>([]);
+
+  const { categories, addCategory, deleteCategory } = useInventory();
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -89,6 +110,7 @@ export function AddItemModal({ open, onOpenChange, onAdd }: AddItemModalProps) {
         name,
         price: parseFloat(price),
         quantity: totalQuantity,
+        category: category || undefined,
         image: finalImageUrl,
         imageUrl: finalImageUrl,
         cloudinaryPublicId: finalPublicId,
@@ -107,10 +129,33 @@ export function AddItemModal({ open, onOpenChange, onAdd }: AddItemModalProps) {
     }
   };
 
+  const handleAddCategory = async () => {
+    if (!newCategory.trim()) return;
+    try {
+      await addCategory(newCategory.trim());
+      setCategory(newCategory.trim()); // Auto-select new category
+      setOpenCombobox(false);
+    } catch (error) {
+      console.error('Error adding category:', error);
+      toast.error('Failed to add category. Check your permissions.');
+    }
+  };
+
+  const handleDeleteCategory = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent select closing or selection
+    if (confirm('Are you sure you want to delete this category?')) {
+      await deleteCategory(id);
+      if (category === categories.find(c => c.id === id)?.name) {
+        setCategory('');
+      }
+    }
+  };
+
   const resetForm = () => {
     setName('');
     setPrice('');
     setQuantity('');
+    setCategory('');
     setImage('');
     setImagePreview('');
     setImageFile(null);
@@ -177,6 +222,78 @@ export function AddItemModal({ open, onOpenChange, onAdd }: AddItemModalProps) {
               onChange={(e) => setName(e.target.value)}
               required
             />
+          </div>
+
+          {/* Category */}
+          <div className="space-y-2">
+            <Label>Category</Label>
+            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={openCombobox}
+                  className="w-full justify-between"
+                >
+                  {category || "Select a category..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                <Command>
+                  <CommandInput 
+                    placeholder="Search or add category..." 
+                    value={newCategory}
+                    onValueChange={setNewCategory}
+                  />
+                  <CommandList>
+                    <CommandEmpty>
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                        onClick={handleAddCategory}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create "{newCategory}"
+                      </button>
+                    </CommandEmpty>
+                    
+                    <CommandGroup heading="Existing Categories">
+                      {categories.map((cat) => (
+                        <CommandItem
+                          key={cat.id}
+                          value={cat.name}
+                          onSelect={() => {
+                            setCategory(cat.name === category ? "" : cat.name);
+                            setOpenCombobox(false);
+                          }}
+                          className="flex items-center justify-between group"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Check
+                              className={cn(
+                                "h-4 w-4",
+                                category === cat.name ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {cat.name}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteCategory(cat.id, e)}
+                            className="bg-transparent hover:bg-destructive/10 text-muted-foreground hover:text-destructive p-1 rounded-sm transition-colors z-50 focus:outline-none"
+                            title="Delete category"
+                            onMouseDown={(e) => e.stopPropagation()} // Prevent CommandItem selection on click/focus
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Price */}

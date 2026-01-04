@@ -11,6 +11,7 @@ export interface InventoryItem {
   totalSold: number; // Total sold (sum of variants or single sold count)
   createdAt: number;
   updatedAt?: number;
+  category?: string;
 
   // Variant support (optional)
   variants?: Variant[]; // If present, use variants for stock tracking
