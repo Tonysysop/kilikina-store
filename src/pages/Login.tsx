@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Loader2, Lock } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -31,14 +32,19 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 bg-primary/10 flex items-center justify-center rounded-full mb-4">
+          <div className="mx-auto h-12 w-12 bg-primary/10 flex items-center justify-center rounded-full mb-4 animate-bounce">
             <Lock className="h-6 w-6 text-primary" />
           </div>
-          <h2 className="text-3xl font-bold tracking-tight">Welcome back</h2>
-          <p className="text-muted-foreground mt-2">
+          <h2 className="text-3xl font-bold tracking-tight animate-in fade-in slide-in-from-bottom-4 duration-1000">
+            Welcome Back, <span className="text-primary bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600">Toluwani</span>
+          </h2>
+          <p className="text-muted-foreground mt-2 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-200">
             Sign in to access your inventory
           </p>
         </div>
