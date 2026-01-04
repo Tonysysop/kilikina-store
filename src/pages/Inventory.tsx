@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   ArrowUpDown,
   Filter,
+  LogOut,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -35,6 +36,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+
+import { auth } from '@/firebase';
+import { signOut } from 'firebase/auth';
 
 const Index = () => {
   const { items, categories, stats, addItem, updateItem, deleteItem, sellItem, isLoading } = useInventory();
@@ -146,6 +150,19 @@ const Index = () => {
                 <Plus className="h-5 w-5 sm:mr-2" />
                 <span className="hidden sm:inline">Add Item</span>
                 <span className="sm:hidden">Add</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  signOut(auth).then(() => {
+                    toast.success('Logged out successfully');
+                  });
+                }}
+                className="text-muted-foreground hover:text-destructive"
+                title="Log out"
+              >
+                <LogOut className="h-5 w-5" />
               </Button>
             </div>
           </div>
