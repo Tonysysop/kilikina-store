@@ -15,7 +15,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Undo2, Loader2, Package } from 'lucide-react';
 import type { SaleRecord } from '@/types/inventory';
 import {
