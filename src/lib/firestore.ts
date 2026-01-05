@@ -390,6 +390,82 @@ export async function processSale(
   }
 }
 // ============================================================================
+// TRANSACTION OPERATIONS
+// ============================================================================
+
+/**
+ * Revert a sale (Undo)
+ * - Restores inventory quantity
+ * - Decrements totalSold count
+ * - Deletes the sale record
+ */
+export async function revertSale(
+  saleId: string,
+  itemId: string,
+  quantityToRevert: number,
+  variantId?: string
+): Promise<void> {
+  try {
+    const itemRef = doc(db, INVENTORY_COLLECTION, itemId);
+    const itemDoc = await getDoc(itemRef);
+
+    if (!itemDoc.exists()) {
+      throw new Error('Item not found');
+    }
+
+    const itemData = itemDoc.data() as FirestoreInventoryItem;
+    const currentTotalSold = itemData.totalSold || 0;
+
+    // Handle variant-based revert
+    if (variantId && itemData.hasVariants && itemData.variants) {
+      const variants = [...itemData.variants];
+      const variantIndex = variants.findIndex(v => v.id === variantId);
+
+      if (variantIndex === -1) {
+        throw new Error('Variant not found');
+      }
+
+      const variant = variants[variantIndex];
+
+      // Update the specific variant
+      variants[variantIndex] = {
+        ...variant,
+        quantity: (variant.quantity || 0) + quantityToRevert,
+        sold: Math.max(0, (variant.sold || 0) - quantityToRevert),
+      };
+
+      // Calculate new total quantity
+      const newTotalQuantity = variants.reduce((sum, v) => sum + v.quantity, 0);
+
+      // Update inventory
+      await updateDoc(itemRef, {
+        variants,
+        quantity: newTotalQuantity,
+        totalSold: Math.max(0, currentTotalSold - quantityToRevert),
+        updatedAt: Timestamp.now(),
+      });
+    } else {
+      // Handle regular item revert
+      const currentQuantity = itemData.quantity;
+
+      await updateDoc(itemRef, {
+        quantity: currentQuantity + quantityToRevert,
+        totalSold: Math.max(0, currentTotalSold - quantityToRevert),
+        updatedAt: Timestamp.now(),
+      });
+    }
+
+    // Delete the sale record
+    await deleteDoc(doc(db, SALES_COLLECTION, saleId));
+    
+    console.log('↩️ Sale reverted successfully', { saleId, itemId, quantityToRevert });
+  } catch (error) {
+    console.error('Error reverting sale:', error);
+    throw new Error('Failed to revert sale');
+  }
+}
+
+// ============================================================================
 // CATEGORY OPERATIONS
 // ============================================================================
 
