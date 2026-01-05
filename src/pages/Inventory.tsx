@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useInventory } from '@/hooks/useInventory';
 import type { InventoryItem } from '@/types/inventory';
 import { StatCard } from '@/components/StatCard';
@@ -26,6 +27,7 @@ import {
   ArrowUpDown,
   Filter,
   LogOut,
+  History,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -37,12 +39,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+import { SalesHistory } from '@/components/SalesHistory';
 import { auth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 
 const Index = () => {
-  const { items, categories, stats, addItem, updateItem, deleteItem, sellItem, isLoading } = useInventory();
+  const navigate = useNavigate();
+  const { items, categories, sales, stats, addItem, updateItem, deleteItem, sellItem, revertSale, isLoading } = useInventory();
 
+  const [showHistory, setShowHistory] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [sellingItem, setSellingItem] = useState<InventoryItem | null>(null);
@@ -146,6 +151,13 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
               <ThemeToggle />
+              <Button onClick={() => navigate('/category-summary')} variant="outline" size={typeof window !== 'undefined' && window.innerWidth < 640 ? 'icon' : 'default'} className="sm:flex">
+                <TrendingUp className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Summary</span>
+              </Button>
+              <Button onClick={() => setShowHistory(true)} variant="outline" size="icon" title="History">
+                <History className="h-4 w-4" />
+              </Button>
               <Button onClick={() => setShowAddModal(true)} size="lg" className="flex-1 sm:flex-initial">
                 <Plus className="h-5 w-5 sm:mr-2" />
                 <span className="hidden sm:inline">Add Item</span>
@@ -383,6 +395,13 @@ const Index = () => {
           const result = await sellItem(id, quantity, variantId);
           return result;
         }}
+      />
+
+      <SalesHistory
+        open={showHistory}
+        onOpenChange={setShowHistory}
+        sales={sales}
+        onRevertSale={revertSale}
       />
 
       <DeleteConfirmModal

@@ -11,6 +11,7 @@ import {
   addCategory as firestoreAddCategory,
   deleteCategory as firestoreDeleteCategory,
   processSale,
+  revertSale,
   type Category,
 } from '@/lib/firestore';
 
@@ -248,6 +249,25 @@ export function useInventory() {
     outOfStockItems: items.filter(item => item.quantity === 0).length,
   };
 
+  const revertSaleRecord = useCallback(async (sale: SaleRecord) => {
+    try {
+      await revertSale(sale.id, sale.itemId, sale.quantity, sale.variantId);
+      toast({
+        title: 'Success',
+        description: 'Sale reverted successfully',
+      });
+      return true;
+    } catch (error) {
+      console.error('Error reverting sale:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to revert sale',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, []);
+
   return {
     items,
     sales,
@@ -258,6 +278,7 @@ export function useInventory() {
     updateItem,
     deleteItem,
     sellItem,
+    revertSale: revertSaleRecord,
     addCategory,
     deleteCategory,
   };

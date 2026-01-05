@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "@/pages/Login";
+import CategorySummary from "@/pages/CategorySummary";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Index />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/category-summary"
+                element={
+                  <ProtectedRoute>
+                    <CategorySummary />
                   </ProtectedRoute>
                 }
               />
